@@ -6,7 +6,7 @@ import {
   ApiBody,
 } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
-import { User } from '../user/user.model';
+import { User } from '../user/user.entity';
 
 class LoginResponseDto {
   access_token: string;

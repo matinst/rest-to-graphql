@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
-import { User } from './user.model';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { User } from './user.entity';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import * as bcrypt from 'bcrypt';
@@ -9,30 +10,36 @@ import * as bcrypt from 'bcrypt';
 export class UserService {
   private readonly saltRounds = 10;
 
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    @InjectRepository(User)
+    private userRepository: Repository<User>,
+  ) {}
 
   async findAll(): Promise<User[]> {
-    return this.prisma.prisma.user.findMany();
+    return this.userRepository.find({
+      relations: ['posts'],
+    });
   }
 
   async findOne(id: string): Promise<User | null> {
-    return this.prisma.prisma.user.findUnique({
+    return this.userRepository.findOne({
       where: { id },
+      relations: ['posts'],
     });
   }
 
   async create(data: CreateUserDto): Promise<User> {
     const hashedPassword = await bcrypt.hash(data.password, this.saltRounds);
 
-    return this.prisma.prisma.user.create({
-      data: {
-        ...data,
-        password: hashedPassword,
-      },
+    const user = this.userRepository.create({
+      ...data,
+      password: hashedPassword,
     });
+
+    return this.userRepository.save(user);
   }
 
-  async update(id: string, data: UpdateUserDto): Promise<User> {
+  async update(id: string, data: UpdateUserDto): Promise<User | null> {
     const updateData: any = { ...data };
 
     // Hash password if it's being updated
@@ -40,16 +47,12 @@ export class UserService {
       updateData.password = await bcrypt.hash(data.password, this.saltRounds);
     }
 
-    return this.prisma.prisma.user.update({
-      where: { id },
-      data: updateData,
-    });
+    await this.userRepository.update(id, updateData);
+    return this.findOne(id);
   }
 
   async remove(id: string): Promise<void> {
-    await this.prisma.prisma.user.delete({
-      where: { id },
-    });
+    await this.userRepository.delete(id);
   }
 
   async validatePassword(plainPassword: string, hashedPassword: string): Promise<boolean> {
@@ -57,7 +60,7 @@ export class UserService {
   }
 
   async findByEmail(email: string): Promise<User | null> {
-    return this.prisma.prisma.user.findUnique({
+    return this.userRepository.findOne({
       where: { email },
     });
   }

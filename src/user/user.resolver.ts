@@ -1,7 +1,7 @@
 import { Resolver, Query, Mutation, Args, ID, Context } from '@nestjs/graphql';
-import { UseGuards } from '@nestjs/common';
+import { NotFoundException, UseGuards } from '@nestjs/common';
 import { UserService } from './user.service';
-import { User } from './user.model';
+import { User } from './user.entity';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
 @Resolver(() => User)
@@ -38,14 +38,17 @@ export class UserResolver {
     @Args('id', { type: () => ID }) id: string,
     @Args('email', { nullable: true }) email?: string,
     @Args('password', { nullable: true }) password?: string,
-    @Context() context,
-  ): Promise<User> {
+  ): Promise<User | null> {
     // Optional: Check if user can only update their own profile
     // if (context.req.user.id !== id) {
     //   throw new ForbiddenException('You can only update your own profile');
     // }
 
-    return this.userService.update(id, { email, password });
+    const updatedUser = await this.userService.update(id, { email, password });
+    if (!updatedUser) {
+      throw new NotFoundException('User not found');
+    }
+    return updatedUser;
   }
 
   @Mutation(() => Boolean)

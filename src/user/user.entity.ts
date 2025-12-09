@@ -1,8 +1,12 @@
+import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn, OneToMany } from 'typeorm';
 import { ObjectType, Field, ID } from '@nestjs/graphql';
 import { ApiProperty } from '@nestjs/swagger';
+import { Post } from '../post/post.entity';
 
+@Entity('users')
 @ObjectType()
 export class User {
+  @PrimaryGeneratedColumn('uuid')
   @Field(() => ID)
   @ApiProperty({
     description: 'Unique identifier for the user',
@@ -10,6 +14,7 @@ export class User {
   })
   id: string;
 
+  @Column({ unique: true })
   @Field()
   @ApiProperty({
     description: 'User email address',
@@ -17,6 +22,7 @@ export class User {
   })
   email: string;
 
+  @Column()
   @Field()
   @ApiProperty({
     description: 'User password (bcrypt hashed)',
@@ -24,6 +30,11 @@ export class User {
   })
   password: string;
 
+  @OneToMany(() => Post, post => post.author)
+  @Field(() => [Post], { nullable: true })
+  posts?: Post[];
+
+  @CreateDateColumn({ name: 'created_at' })
   @Field()
   @ApiProperty({
     description: 'Account creation timestamp',
@@ -31,6 +42,7 @@ export class User {
   })
   createdAt: Date;
 
+  @UpdateDateColumn({ name: 'updated_at' })
   @Field()
   @ApiProperty({
     description: 'Last update timestamp',
